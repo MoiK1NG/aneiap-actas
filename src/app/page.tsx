@@ -10,108 +10,91 @@ import {
   CategoryPieChart,
   ProposerBarChart,
 } from "@/components/charts/MotionsChart";
-import { FileText, CheckCircle, XCircle, BarChart2 } from "lucide-react";
+import { FileText, CheckCircle, XCircle, BarChart2, Layers } from "lucide-react";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm p-5">
+      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wide mb-4">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
 export default function HomePage() {
-  const actas = loadAllActas();
-  const stats = computeDashboardStats(actas);
+  const actas      = loadAllActas();
+  const stats      = computeDashboardStats(actas);
   const allMotions = getAllMotions(actas);
   const duplicates = detectDuplicates(allMotions);
 
   const approvalRate = stats.totalMotions > 0
-    ? Math.round((stats.approvedMotions / stats.totalMotions) * 100)
-    : 0;
+    ? Math.round((stats.approvedMotions / stats.totalMotions) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50">
+
+      {/* ── Top bar ─────────────────────────────────────────── */}
+      <header className="bg-white border-b-2 border-slate-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-md shadow-blue-200">
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">ANEIAP · Actas</h1>
-              <p className="text-xs text-gray-500">Sistema de Gestión de Asambleas</p>
+              <h1 className="text-base font-black text-slate-900 leading-none">ANEIAP · Actas</h1>
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">Sistema de Gestión de Asambleas</p>
             </div>
           </div>
-          <div className="text-right text-xs text-gray-400">
-            <div>{stats.totalActas} actas cargadas</div>
-            <div>{stats.totalMotions} mociones indexadas</div>
+          <div className="hidden sm:flex items-center gap-4 text-xs font-semibold text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              {stats.totalActas} actas · {stats.totalMotions} mociones
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* Search hero */}
-        <section className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl px-6 py-8 text-white">
-          <h2 className="text-xl font-bold mb-1">Búsqueda de Mociones</h2>
-          <p className="text-blue-200 text-sm mb-5">
-            Escribe para buscar en el historial de asambleas y detectar mociones similares
-          </p>
+        {/* ── Hero / Search ─────────────────────────────────── */}
+        <section className="relative bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 rounded-3xl px-6 py-8 text-white overflow-hidden shadow-xl shadow-blue-200">
+          {/* decorative blobs */}
+          <div className="absolute -top-8 -right-8 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-6 w-56 h-56 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
           <div className="relative">
+            <div className="flex items-center gap-2 mb-1">
+              <Layers className="w-4 h-4 text-blue-300" />
+              <span className="text-blue-300 text-xs font-semibold uppercase tracking-widest">Búsqueda inteligente</span>
+            </div>
+            <h2 className="text-2xl font-black leading-tight mb-1">Encuentra cualquier moción</h2>
+            <p className="text-blue-200 text-sm mb-6 max-w-xl">
+              Búsqueda difusa en tiempo real sobre el historial completo. Detecta automáticamente mociones similares antes de proponerlas.
+            </p>
             <SearchBar motions={allMotions} />
           </div>
         </section>
 
-        {/* Stats overview */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Actas"
-            value={stats.totalActas}
-            subtitle="asambleas registradas"
-            icon={<FileText className="w-5 h-5" />}
-            color="blue"
-          />
-          <StatsCard
-            title="Total Mociones"
-            value={stats.totalMotions}
-            subtitle="decisiones históricas"
-            icon={<BarChart2 className="w-5 h-5" />}
-            color="purple"
-          />
-          <StatsCard
-            title="Aprobadas"
-            value={`${approvalRate}%`}
-            subtitle={`${stats.approvedMotions} de ${stats.totalMotions}`}
-            icon={<CheckCircle className="w-5 h-5" />}
-            color="green"
-          />
-          <StatsCard
-            title="Rechazadas"
-            value={stats.rejectedMotions}
-            subtitle="mociones no aprobadas"
-            icon={<XCircle className="w-5 h-5" />}
-            color="red"
-          />
+        {/* ── Stats ─────────────────────────────────────────── */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatsCard title="Total Actas"    value={stats.totalActas}    subtitle="asambleas registradas"  icon={<FileText className="w-5 h-5" />}   color="blue"   />
+          <StatsCard title="Mociones"       value={stats.totalMotions}  subtitle="decisiones históricas"  icon={<BarChart2 className="w-5 h-5" />}  color="purple" />
+          <StatsCard title="Tasa de Aprobación" value={`${approvalRate}%`} subtitle={`${stats.approvedMotions} aprobadas`} icon={<CheckCircle className="w-5 h-5" />} color="green" />
+          <StatsCard title="Rechazadas"     value={stats.rejectedMotions} subtitle="mociones no aprobadas" icon={<XCircle className="w-5 h-5" />}   color="red"    />
         </section>
 
-        {/* Charts */}
+        {/* ── Charts ────────────────────────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h3 className="font-semibold text-gray-800 mb-4">Mociones por Año</h3>
-            <MotionsByYearChart stats={stats} />
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h3 className="font-semibold text-gray-800 mb-4">Tasa de Aprobación por Año</h3>
-            <ApprovalRateChart stats={stats} />
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h3 className="font-semibold text-gray-800 mb-4">Mociones por Categoría</h3>
-            <CategoryPieChart stats={stats} />
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h3 className="font-semibold text-gray-800 mb-4">Top Proponentes</h3>
-            <ProposerBarChart stats={stats} />
-          </div>
+          <ChartCard title="Mociones por Año"><MotionsByYearChart stats={stats} /></ChartCard>
+          <ChartCard title="Tasa de Aprobación"><ApprovalRateChart stats={stats} /></ChartCard>
+          <ChartCard title="Por Categoría"><CategoryPieChart stats={stats} /></ChartCard>
+          <ChartCard title="Top Proponentes"><ProposerBarChart stats={stats} /></ChartCard>
         </section>
 
-        {/* Bottom panels */}
+        {/* ── Bottom panels ─────────────────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <CriticalAlerts
@@ -126,26 +109,29 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Empty state guide */}
+        {/* ── Empty state ───────────────────────────────────── */}
         {stats.totalActas === 0 && (
-          <section className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-            <FileText className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-            <h3 className="font-semibold text-blue-800 mb-2">Sin actas cargadas</h3>
-            <p className="text-blue-600 text-sm mb-3">
-              Copia tus archivos markdown de actas en la carpeta:
+          <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-100 rounded-3xl p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 className="font-black text-blue-900 text-lg mb-2">Sin actas cargadas</h3>
+            <p className="text-blue-600 text-sm mb-4 max-w-sm mx-auto">
+              Copia tus archivos markdown de actas en la carpeta del proyecto:
             </p>
-            <code className="bg-white border border-blue-200 rounded px-3 py-1.5 text-sm text-blue-700 block max-w-xs mx-auto">
+            <code className="bg-white border border-blue-200 rounded-xl px-4 py-2 text-sm text-blue-700 font-mono shadow-sm inline-block">
               data/actas/
             </code>
-            <p className="text-blue-500 text-xs mt-3">
-              Acepta archivos con el formato: <em>GC-F-01 ACTA 122° ANGE...</em>
+            <p className="text-blue-400 text-xs mt-3">
+              Formato: <em>GC-F-01 ACTA 122° ANGE ZOOM MAYO 2026.md</em>
             </p>
           </section>
         )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 py-6 mt-4 text-center text-xs text-gray-400 border-t border-gray-200">
-        ANEIAP · Sistema de Gestión de Actas · Todos los datos históricos son de solo lectura
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-6 mt-2 border-t-2 border-slate-100 flex items-center justify-between flex-wrap gap-2 text-xs text-slate-400">
+        <span className="font-semibold">ANEIAP · Sistema de Gestión de Actas</span>
+        <span>Datos de solo lectura · {stats.totalActas} actas · {stats.totalMotions} mociones</span>
       </footer>
     </div>
   );

@@ -5,7 +5,7 @@ import Fuse, { type FuseResult } from "fuse.js";
 import { Motion, MotionCategory } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { CATEGORY_COLORS, CATEGORY_LABELS, RESULT_COLORS, RESULT_LABELS, cn } from "@/lib/utils";
-import { Search, X, AlertTriangle, ChevronDown } from "lucide-react";
+import { Search, X, AlertTriangle, SlidersHorizontal } from "lucide-react";
 
 interface SearchBarProps {
   motions: Motion[];
@@ -18,236 +18,214 @@ const CATEGORY_OPTIONS: MotionCategory[] = [
 ];
 
 export function SearchBar({ motions, onSelect }: SearchBarProps) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FuseResult<Motion>[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<Motion | null>(null);
-  const [filters, setFilters] = useState({
-    year: "" as string,
-    result: "" as string,
-    category: "" as string,
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery]               = useState("");
+  const [results, setResults]           = useState<FuseResult<Motion>[]>([]);
+  const [showResults, setShowResults]   = useState(false);
+  const [selected, setSelected]         = useState<Motion | null>(null);
+  const [showFilters, setShowFilters]   = useState(false);
+  const [filters, setFilters]           = useState({ year: "", result: "", category: "" });
+  const inputRef    = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const fuse = useCallback(() => {
-    let filtered = motions;
-    if (filters.year) filtered = filtered.filter((m) => m.actaYear === parseInt(filters.year));
-    if (filters.result) filtered = filtered.filter((m) => m.result === filters.result);
-    if (filters.category) filtered = filtered.filter((m) => m.category === filters.category);
-
-    return new Fuse(filtered, {
+  const getFuse = useCallback(() => {
+    let data = motions;
+    if (filters.year)     data = data.filter((m) => m.actaYear === parseInt(filters.year));
+    if (filters.result)   data = data.filter((m) => m.result === filters.result);
+    if (filters.category) data = data.filter((m) => m.category === filters.category);
+    return new Fuse(data, {
       keys: [
         { name: "text", weight: 0.6 },
         { name: "proposer", weight: 0.2 },
         { name: "observations", weight: 0.1 },
         { name: "actaName", weight: 0.1 },
       ],
-      threshold: 0.4,
-      includeScore: true,
-      minMatchCharLength: 2,
+      threshold: 0.45, includeScore: true, minMatchCharLength: 2,
     });
   }, [motions, filters]);
 
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    const f = fuse();
-    const r = f.search(query, { limit: 8 });
-    setResults(r);
+    if (query.trim().length < 2) { setResults([]); return; }
+    setResults(getFuse().search(query, { limit: 8 }));
     setShowResults(true);
-  }, [query, fuse]);
+  }, [query, getFuse]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    const close = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
         setShowResults(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
   }, []);
 
   const years = Array.from(new Set(motions.map((m) => m.actaYear))).sort((a, b) => b - a);
 
-  function handleSelect(motion: Motion) {
-    setSelectedResult(motion);
+  function pick(motion: Motion) {
+    setSelected(motion);
     setShowResults(false);
-    setQuery(motion.text.slice(0, 60) + "...");
+    setQuery(motion.text.slice(0, 70));
     onSelect?.(motion);
   }
 
-  function clearSearch() {
-    setQuery("");
-    setResults([]);
-    setSelectedResult(null);
-    setShowResults(false);
+  function clear() {
+    setQuery(""); setResults([]); setSelected(null); setShowResults(false);
     inputRef.current?.focus();
   }
 
-  const similarCount = selectedResult
-    ? motions.filter((m) => m.id !== selectedResult.id && m.text.toLowerCase().includes(selectedResult.text.slice(0, 30).toLowerCase())).length
+  const similarCount = selected
+    ? motions.filter((m) => m.id !== selected.id &&
+        m.text.toLowerCase().includes(selected.text.slice(0, 30).toLowerCase())).length
     : 0;
 
-  return (
-    <div ref={containerRef} className="w-full max-w-3xl mx-auto">
-      {/* Search input */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query.length >= 2 && setShowResults(true)}
-          placeholder="Buscar moción, tema o institución..."
-          className="w-full pl-12 pr-10 py-4 text-base rounded-xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        />
-        {query && (
-          <button onClick={clearSearch} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
+  const hasActiveFilter = filters.year || filters.result || filters.category;
 
-      {/* Filter toggle */}
-      <div className="flex justify-end mt-2">
+  return (
+    <div ref={containerRef} className="w-full">
+      {/* Input row */}
+      <div className="relative flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300 w-5 h-5 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => query.length >= 2 && setShowResults(true)}
+            placeholder="Buscar moción, proponente o tema..."
+            className="w-full pl-12 pr-10 py-3.5 text-sm rounded-xl border-0 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-slate-800 placeholder:text-slate-400"
+          />
+          {query && (
+            <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <X className="w-3.5 h-3.5 text-slate-500" />
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setShowFilters((v) => !v)}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600"
+          className={cn(
+            "flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center shadow-lg transition-all",
+            showFilters || hasActiveFilter ? "bg-blue-500 text-white" : "bg-white text-slate-500 hover:text-blue-600"
+          )}
         >
-          <ChevronDown className={cn("w-4 h-4 transition-transform", showFilters && "rotate-180")} />
-          Filtros
+          <SlidersHorizontal className="w-4 h-4" />
         </button>
       </div>
 
       {/* Filters */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
-          <select
-            value={filters.year}
-            onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value }))}
-            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
-          >
-            <option value="">Todos los años</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select
-            value={filters.result}
-            onChange={(e) => setFilters((f) => ({ ...f, result: e.target.value }))}
-            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
-          >
-            <option value="">Todos los resultados</option>
-            <option value="approved">Aprobadas</option>
-            <option value="rejected">Rechazadas</option>
-          </select>
-          <select
-            value={filters.category}
-            onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
-            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white"
-          >
-            <option value="">Todas las categorías</option>
-            {CATEGORY_OPTIONS.map((c) => (
-              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-            ))}
-          </select>
+        <div className="mt-2 p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 flex flex-wrap gap-2">
+          {[
+            {
+              value: filters.year,
+              setter: (v: string) => setFilters((f) => ({ ...f, year: v })),
+              options: [["", "Todos los años"], ...years.map((y) => [String(y), String(y)])],
+            },
+            {
+              value: filters.result,
+              setter: (v: string) => setFilters((f) => ({ ...f, result: v })),
+              options: [["", "Cualquier resultado"], ["approved", "✓ Aprobadas"], ["rejected", "✗ Rechazadas"]],
+            },
+            {
+              value: filters.category,
+              setter: (v: string) => setFilters((f) => ({ ...f, category: v })),
+              options: [["", "Todas las categorías"], ...CATEGORY_OPTIONS.map((c) => [c, CATEGORY_LABELS[c]])],
+            },
+          ].map(({ value, setter, options }, i) => (
+            <select key={i} value={value} onChange={(e) => setter(e.target.value)}
+              className="text-xs border-0 rounded-lg px-3 py-2 bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1 min-w-28">
+              {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          ))}
         </div>
       )}
 
-      {/* Results dropdown */}
+      {/* Dropdown results */}
       {showResults && results.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-          {results.map(({ item: motion, score }) => {
-            const sim = score !== undefined ? Math.round((1 - score) * 100) : 100;
-            return (
-              <button
-                key={motion.id}
-                onClick={() => handleSelect(motion)}
-                className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-gray-800 line-clamp-2 flex-1">{motion.text}</p>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">{sim}% relevancia</span>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  <Badge className={RESULT_COLORS[motion.result]}>{RESULT_LABELS[motion.result]}</Badge>
-                  <Badge className={CATEGORY_COLORS[motion.category]}>{CATEGORY_LABELS[motion.category]}</Badge>
-                  <span className="text-xs text-gray-500">{motion.actaName} · {motion.actaYear}</span>
-                  <span className="text-xs text-gray-400">Proponente: {motion.proposer}</span>
-                </div>
-              </button>
-            );
-          })}
+        <div className="absolute z-50 mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden max-h-96 overflow-y-auto">
+          <div className="px-4 py-2 border-b border-slate-50 bg-slate-50 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">{results.length} resultado(s)</span>
+            <span className="text-xs text-slate-400">↵ para seleccionar</span>
+          </div>
+          {results.map(({ item: m, score }) => (
+            <button key={m.id} onClick={() => pick(m)}
+              className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-slate-50 last:border-0 transition-colors group">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm text-slate-800 line-clamp-2 flex-1 leading-snug">{m.text}</p>
+                <span className="text-xs text-slate-300 whitespace-nowrap">{Math.round((1-(score??0))*100)}%</span>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1.5 items-center">
+                <Badge className={RESULT_COLORS[m.result]}>{RESULT_LABELS[m.result]}</Badge>
+                <Badge className={CATEGORY_COLORS[m.category]}>{CATEGORY_LABELS[m.category]}</Badge>
+                <span className="text-xs text-slate-400">{m.actaYear} · {m.proposer}</span>
+              </div>
+            </button>
+          ))}
         </div>
       )}
-
       {showResults && query.length >= 2 && results.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-100 px-4 py-6 text-center text-gray-500 text-sm">
-          No se encontraron mociones para "{query}"
+        <div className="absolute z-50 mt-2 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 px-4 py-8 text-center text-slate-400 text-sm">
+          Sin resultados para &quot;{query}&quot;
         </div>
       )}
 
-      {/* Selected result detail */}
-      {selectedResult && (
-        <div className="mt-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+      {/* Selected detail card */}
+      {selected && (
+        <div className="mt-3 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+          {/* Alert banner */}
           {similarCount > 0 && (
-            <div className="flex items-center gap-2 mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>
-                <strong>Moción similar encontrada:</strong> Existen {similarCount} mocione(s) relacionada(s) en el historial.
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-xs text-amber-800">
+                <strong>Moción similar encontrada</strong> — {similarCount} moción(es) relacionada(s) en el historial. Revisa antes de proponer.
               </span>
             </div>
           )}
-
-          <div className="flex flex-wrap gap-2 mb-3">
-            <Badge className={RESULT_COLORS[selectedResult.result]}>{RESULT_LABELS[selectedResult.result]}</Badge>
-            <Badge className={CATEGORY_COLORS[selectedResult.category]}>{CATEGORY_LABELS[selectedResult.category]}</Badge>
-            <Badge className="bg-gray-100 text-gray-600 border-gray-200">Moción #{selectedResult.number}</Badge>
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div className="flex gap-2">
+              <Badge className={RESULT_COLORS[selected.result]}>{RESULT_LABELS[selected.result]}</Badge>
+              <Badge className={CATEGORY_COLORS[selected.category]}>{CATEGORY_LABELS[selected.category]}</Badge>
+              <Badge className="bg-slate-100 text-slate-600 border-slate-200">#{selected.number}</Badge>
+            </div>
+            <button onClick={clear} className="w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center">
+              <X className="w-3.5 h-3.5 text-slate-500" />
+            </button>
           </div>
-
-          <p className="text-sm text-gray-800 mb-3">{selectedResult.text}</p>
-
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-gray-500">Acta:</span>{" "}
-              <span className="font-medium">{selectedResult.actaName}</span>
+          {/* Body */}
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-slate-800 leading-relaxed">{selected.text}</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {[
+                ["Acta", selected.actaName],
+                ["Fecha", selected.actaDate],
+                ["Proponente", selected.proposer],
+                ["Secundantes", selected.seconders.join(", ") || "—"],
+              ].map(([l, v]) => (
+                <div key={l} className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                  <span className="text-slate-400 block mb-0.5">{l}</span>
+                  <span className="font-semibold text-slate-700 break-words">{v}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <span className="text-gray-500">Fecha:</span>{" "}
-              <span className="font-medium">{selectedResult.actaDate}</span>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { l: "A Favor",      v: selected.votesFor,      c: "text-green-600 bg-green-50 border-green-100" },
+                { l: "En Contra",    v: selected.votesAgainst,  c: "text-red-600 bg-red-50 border-red-100"       },
+                { l: "En Blanco",    v: selected.votesBlank,    c: "text-slate-500 bg-slate-50 border-slate-100" },
+                { l: "Abstenciones", v: selected.abstentions,   c: "text-amber-600 bg-amber-50 border-amber-100" },
+              ].map(({ l, v, c }) => (
+                <div key={l} className={cn("rounded-xl p-2 border text-center", c)}>
+                  <div className="text-2xl font-black">{v}</div>
+                  <div className="text-xs font-medium opacity-80 mt-0.5 leading-tight">{l}</div>
+                </div>
+              ))}
             </div>
-            <div>
-              <span className="text-gray-500">Proponente:</span>{" "}
-              <span className="font-medium">{selectedResult.proposer}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Secundantes:</span>{" "}
-              <span className="font-medium">{selectedResult.seconders.join(", ") || "N/A"}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 mt-3 text-center">
-            {[
-              { label: "A Favor", value: selectedResult.votesFor, color: "text-green-600" },
-              { label: "En Contra", value: selectedResult.votesAgainst, color: "text-red-600" },
-              { label: "En Blanco", value: selectedResult.votesBlank, color: "text-gray-500" },
-              { label: "Abstenciones", value: selectedResult.abstentions, color: "text-yellow-600" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="bg-gray-50 rounded-lg p-2">
-                <div className={cn("text-xl font-bold", color)}>{value}</div>
-                <div className="text-xs text-gray-500">{label}</div>
+            {selected.observations && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-800">
+                <strong>Observación:</strong> {selected.observations}
               </div>
-            ))}
+            )}
           </div>
-
-          {selectedResult.observations && (
-            <p className="mt-3 text-xs text-gray-600 bg-gray-50 rounded p-2">
-              <strong>Observación:</strong> {selectedResult.observations}
-            </p>
-          )}
         </div>
       )}
     </div>

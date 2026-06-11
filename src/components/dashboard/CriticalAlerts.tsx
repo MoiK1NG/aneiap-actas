@@ -2,8 +2,8 @@
 
 import { Motion } from "@/types";
 import { Badge } from "@/components/ui/Badge";
-import { AlertTriangle, DollarSign, Scale, ChevronRight } from "lucide-react";
-import { RESULT_COLORS, RESULT_LABELS } from "@/lib/utils";
+import { AlertTriangle, DollarSign, Scale, ChevronRight, X } from "lucide-react";
+import { RESULT_COLORS, RESULT_LABELS, cn } from "@/lib/utils";
 import { useState } from "react";
 
 interface Props {
@@ -16,63 +16,80 @@ function MotionRow({ motion, onExpand }: { motion: Motion; onExpand: (m: Motion)
   return (
     <button
       onClick={() => onExpand(motion)}
-      className="w-full text-left flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 border border-gray-100 transition-colors"
+      className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-slate-100 transition-all hover:border-slate-200 hover:shadow-sm group"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 line-clamp-1">{motion.text}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{motion.actaName} · {motion.actaYear}</p>
+        <p className="text-sm text-slate-800 line-clamp-2 leading-snug">{motion.text}</p>
+        <p className="text-xs text-slate-400 mt-1 font-medium">{motion.actaName} · {motion.actaYear}</p>
       </div>
-      <Badge className={RESULT_COLORS[motion.result]}>{RESULT_LABELS[motion.result]}</Badge>
-      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Badge className={RESULT_COLORS[motion.result]}>{RESULT_LABELS[motion.result]}</Badge>
+        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+      </div>
     </button>
   );
 }
 
+const TABS = [
+  { key: "sanction"  as const, label: "Sanciones",   icon: AlertTriangle, data: (p: Props) => p.sanctionMotions,  accent: "text-red-600",    activeBg: "bg-red-50 border-b-2 border-red-500"    },
+  { key: "financial" as const, label: "Financiero",   icon: DollarSign,    data: (p: Props) => p.financialMotions, accent: "text-amber-600",  activeBg: "bg-amber-50 border-b-2 border-amber-500"  },
+  { key: "appeal"    as const, label: "Apelaciones",  icon: Scale,         data: (p: Props) => p.appealMotions,    accent: "text-orange-600", activeBg: "bg-orange-50 border-b-2 border-orange-500" },
+];
+
 export function CriticalAlerts({ sanctionMotions, financialMotions, appealMotions }: Props) {
+  const props = { sanctionMotions, financialMotions, appealMotions };
   const [activeTab, setActiveTab] = useState<"sanction" | "financial" | "appeal">("sanction");
   const [expanded, setExpanded] = useState<Motion | null>(null);
 
-  const tabs = [
-    { key: "sanction" as const, label: "Sanciones", icon: <AlertTriangle className="w-4 h-4" />, data: sanctionMotions, color: "text-red-600" },
-    { key: "financial" as const, label: "Financiero", icon: <DollarSign className="w-4 h-4" />, data: financialMotions, color: "text-yellow-600" },
-    { key: "appeal" as const, label: "Apelaciones", icon: <Scale className="w-4 h-4" />, data: appealMotions, color: "text-orange-600" },
-  ];
-
-  const activeData = tabs.find((t) => t.key === activeTab)?.data || [];
+  const activeData = TABS.find((t) => t.key === activeTab)?.data(props) ?? [];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100">
-        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-red-500" />
+    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-base">
+          <span className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+          </span>
           Información Crítica
         </h3>
+        <p className="text-xs text-slate-400 mt-0.5 ml-9">Sanciones, temas financieros y apelaciones</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => { setActiveTab(tab.key); setExpanded(null); }}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors
-              ${activeTab === tab.key
-                ? `border-b-2 border-blue-500 ${tab.color} bg-blue-50`
-                : "text-gray-500 hover:text-gray-700"
-              }`}
-          >
-            {tab.icon}
-            {tab.label}
-            <span className="ml-0.5 text-xs bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5">
-              {tab.data.length}
-            </span>
-          </button>
-        ))}
+      <div className="flex border-b border-slate-100">
+        {TABS.map(({ key, label, icon: Icon, data, accent, activeBg }) => {
+          const count = data(props).length;
+          const isActive = activeTab === key;
+          return (
+            <button
+              key={key}
+              onClick={() => { setActiveTab(key); setExpanded(null); }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-semibold transition-all",
+                isActive ? cn(accent, activeBg) : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className={cn(
+                "text-xs rounded-full px-1.5 py-0.5 font-bold",
+                count > 0 ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-400"
+              )}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="p-3 space-y-2 max-h-72 overflow-y-auto">
+      {/* List */}
+      <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
         {activeData.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-6">No hay registros en esta categoría</p>
+          <div className="text-center py-8">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle className="w-5 h-5 text-slate-300" />
+            </div>
+            <p className="text-slate-400 text-sm">No hay registros en esta categoría</p>
+          </div>
         ) : (
           activeData.slice(0, 20).map((m) => (
             <MotionRow key={m.id} motion={m} onExpand={setExpanded} />
@@ -82,21 +99,30 @@ export function CriticalAlerts({ sanctionMotions, financialMotions, appealMotion
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-gray-100 p-4 bg-gray-50">
-          <div className="flex items-start justify-between mb-2">
-            <h4 className="text-sm font-semibold text-gray-800">Detalle de Moción</h4>
-            <button onClick={() => setExpanded(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cerrar</button>
+        <div className="border-t-2 border-slate-100 p-4 bg-slate-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-bold text-slate-800">Detalle de Moción #{expanded.number}</h4>
+            <button onClick={() => setExpanded(null)} className="w-6 h-6 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <X className="w-3.5 h-3.5 text-slate-500" />
+            </button>
           </div>
-          <p className="text-sm text-gray-700 mb-2">{expanded.text}</p>
-          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-            <span><strong>Proponente:</strong> {expanded.proposer}</span>
-            <span><strong>Acta:</strong> {expanded.actaName}</span>
-            <span><strong>A favor:</strong> {expanded.votesFor}</span>
-            <span><strong>En contra:</strong> {expanded.votesAgainst}</span>
+          <p className="text-sm text-slate-700 mb-3 bg-white rounded-xl p-3 border border-slate-100 leading-relaxed">{expanded.text}</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {[
+              ["Proponente", expanded.proposer],
+              ["Acta", expanded.actaName],
+              ["A favor", String(expanded.votesFor)],
+              ["En contra", String(expanded.votesAgainst)],
+            ].map(([label, val]) => (
+              <div key={label} className="bg-white rounded-lg p-2 border border-slate-100">
+                <span className="text-slate-400 block">{label}</span>
+                <span className="font-semibold text-slate-700">{val}</span>
+              </div>
+            ))}
           </div>
           {expanded.observations && (
-            <p className="mt-2 text-xs text-gray-500 bg-white rounded p-2 border border-gray-100">
-              {expanded.observations}
+            <p className="mt-2 text-xs text-slate-500 bg-amber-50 rounded-lg p-2.5 border border-amber-100">
+              <strong className="text-amber-700">Obs:</strong> {expanded.observations}
             </p>
           )}
         </div>

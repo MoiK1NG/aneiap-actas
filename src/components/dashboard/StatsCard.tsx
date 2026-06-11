@@ -12,21 +12,32 @@ interface StatsCardProps {
 }
 
 const colorMap = {
-  blue: "bg-blue-50 border-blue-200 text-blue-700",
-  green: "bg-green-50 border-green-200 text-green-700",
-  red: "bg-red-50 border-red-200 text-red-700",
-  yellow: "bg-yellow-50 border-yellow-200 text-yellow-700",
-  purple: "bg-purple-50 border-purple-200 text-purple-700",
+  blue:   { card: "bg-white border-blue-100",   icon: "bg-blue-600",   val: "text-blue-700",   sub: "text-blue-400"  },
+  green:  { card: "bg-white border-green-100",  icon: "bg-green-600",  val: "text-green-700",  sub: "text-green-400" },
+  red:    { card: "bg-white border-red-100",     icon: "bg-red-500",    val: "text-red-600",    sub: "text-red-400"   },
+  yellow: { card: "bg-white border-yellow-100",  icon: "bg-yellow-500", val: "text-yellow-700", sub: "text-yellow-500"},
+  purple: { card: "bg-white border-purple-100",  icon: "bg-purple-600", val: "text-purple-700", sub: "text-purple-400"},
 };
 
 export function StatsCard({ title, value, subtitle, icon, color = "blue", className }: StatsCardProps) {
+  const c = colorMap[color];
   return (
-    <div className={cn("rounded-xl border p-4 flex items-start gap-3", colorMap[color], className)}>
-      {icon && <div className="mt-0.5 opacity-80">{icon}</div>}
-      <div className="min-w-0">
-        <p className="text-sm font-medium opacity-75">{title}</p>
-        <p className="text-3xl font-bold mt-0.5">{value}</p>
-        {subtitle && <p className="text-xs opacity-60 mt-0.5">{subtitle}</p>}
+    <div className={cn(
+      "rounded-2xl border-2 p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow",
+      c.card, className
+    )}>
+      {icon && (
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0",
+          c.icon
+        )}>
+          {icon}
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+        <p className={cn("text-3xl font-black mt-0.5 leading-none", c.val)}>{value}</p>
+        {subtitle && <p className={cn("text-xs mt-1 font-medium", c.sub)}>{subtitle}</p>}
       </div>
     </div>
   );
