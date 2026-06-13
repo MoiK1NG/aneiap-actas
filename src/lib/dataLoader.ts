@@ -99,8 +99,8 @@ export function computeDashboardStats(actas: Acta[]): DashboardStats {
 }
 
 function levenshteinSimilarity(a: string, b: string): number {
-  const al = a.toLowerCase().slice(0, 200);
-  const bl = b.toLowerCase().slice(0, 200);
+  const al = a.toLowerCase().slice(0, 80);
+  const bl = b.toLowerCase().slice(0, 80);
   if (al === bl) return 1;
 
   const matrix: number[][] = Array.from({ length: al.length + 1 }, (_, i) =>
