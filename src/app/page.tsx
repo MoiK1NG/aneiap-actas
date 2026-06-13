@@ -1,4 +1,4 @@
-import { loadAllActas, computeDashboardStats, detectDuplicates, getAllMotions } from "@/lib/dataLoader";
+import { loadData } from "@/lib/generatedLoader";
 import { SearchBar } from "@/components/search/SearchBar";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { CriticalAlerts } from "@/components/dashboard/CriticalAlerts";
@@ -25,12 +25,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 }
 
 export default function HomePage() {
-  const actas      = loadAllActas();
-  const stats      = computeDashboardStats(actas);
-  const allMotions = getAllMotions(actas);
-  // Limit duplicate detection to the 10 most recent actas to avoid O(n²) build timeout
-  const recentMotions = actas.slice(0, 10).flatMap((a) => a.motions);
-  const duplicates = detectDuplicates(recentMotions);
+  const { stats, allMotions, duplicates } = loadData();
 
   const approvalRate = stats.totalMotions > 0
     ? Math.round((stats.approvedMotions / stats.totalMotions) * 100) : 0;

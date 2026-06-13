@@ -44,7 +44,7 @@ export interface Acta {
   secretary: string;
   moderator: string;
   attendingInstitutions: string[];
-  rawContent: string;
+  rawContent?: string;
   filePath: string;
 }
 
